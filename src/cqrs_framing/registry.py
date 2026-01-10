@@ -1,0 +1,158 @@
+"""Handler registry using DI container for request type to handler mapping."""
+
+from __future__ import annotations
+
+import inspect
+from typing import Any
+
+from di_container import DIContainer  # type: ignore[import-untyped]
+
+
+class HandlerNotRegisteredError(RuntimeError):
+    """Raised when no handler is registered for a request type."""
+
+    pass
+
+
+class DuplicateHandlerError(RuntimeError):
+    """Raised when attempting to register a duplicate handler."""
+
+    pass
+
+
+class HandlerRegistry:
+    """Registry that maps request types to handlers using DI container."""
+
+    def __init__(self, container: DIContainer | None = None) -> None:
+        """
+        Initialize the registry with an optional DI container.
+
+        Args:
+            container: DI container for resolving handlers. If None, creates a
+                new one.
+        """
+        self._container = container if container is not None else DIContainer()
+        self._sync: dict[type[Any], type[Any]] = {}
+        self._async: dict[type[Any], type[Any]] = {}
+
+    @property
+    def container(self) -> DIContainer:
+        """Get the underlying DI container."""
+        return self._container
+
+    def register(self, request_type: type[Any], handler_type: type[Any]) -> None:
+        """
+        Register a handler type for a request type.
+
+        The handler will be resolved from the DI container when needed.
+
+        Args:
+            request_type: The type of request this handler processes
+            handler_type: The handler class (will be resolved with
+                dependencies)
+
+        Raises:
+            TypeError: If handler doesn't have an execute method
+            DuplicateHandlerError: If a handler is already registered for this
+                request type
+        """
+        # Check if handler has execute method
+        execute = getattr(handler_type, "execute", None)
+        if execute is None:
+            raise TypeError("Handler must provide an execute(...) method")
+
+        # Register handler type in container if not already registered
+        if not self._container.is_registered(handler_type):
+            self._container.register(handler_type)
+
+        # Determine if sync or async
+        if inspect.iscoroutinefunction(execute):
+            if request_type in self._async:
+                raise DuplicateHandlerError(
+                    f"Async handler already registered for " f"{request_type.__name__}"
+                )
+            self._async[request_type] = handler_type
+        else:
+            if request_type in self._sync:
+                raise DuplicateHandlerError(
+                    f"Sync handler already registered for " f"{request_type.__name__}"
+                )
+            self._sync[request_type] = handler_type
+
+    def register_instance(self, request_type: type[Any], handler_instance: Any) -> None:
+        """
+        Register a pre-instantiated handler instance.
+
+        Use this for handlers that don't need DI or when you want full control.
+
+        Args:
+            request_type: The type of request this handler processes
+            handler_instance: The handler instance
+
+        Raises:
+            TypeError: If handler doesn't have an execute method
+            DuplicateHandlerError: If a handler is already registered for this
+                request type
+        """
+        execute = getattr(handler_instance, "execute", None)
+        if execute is None:
+            raise TypeError("Handler must provide an execute(...) method")
+
+        handler_type = type(handler_instance)
+
+        # Register as singleton instance in container
+        self._container.register_instance(handler_type, handler_instance)
+
+        # Map request to handler type
+        if inspect.iscoroutinefunction(execute):
+            if request_type in self._async:
+                raise DuplicateHandlerError(
+                    f"Async handler already registered for " f"{request_type.__name__}"
+                )
+            self._async[request_type] = handler_type
+        else:
+            if request_type in self._sync:
+                raise DuplicateHandlerError(
+                    f"Sync handler already registered for " f"{request_type.__name__}"
+                )
+            self._sync[request_type] = handler_type
+
+    def resolve_sync(self, request_type: type[Any]) -> Any:
+        """
+        Resolve a synchronous handler for the given request type.
+
+        Args:
+            request_type: The request type to resolve
+
+        Returns:
+            The handler instance (resolved from DI container)
+
+        Raises:
+            HandlerNotRegisteredError: If no sync handler is registered
+        """
+        handler_type = self._sync.get(request_type)
+        if handler_type is None:
+            raise HandlerNotRegisteredError(
+                f"No sync handler registered for {request_type.__name__}"
+            )
+        return self._container.resolve(handler_type)
+
+    def resolve_async(self, request_type: type[Any]) -> Any:
+        """
+        Resolve an asynchronous handler for the given request type.
+
+        Args:
+            request_type: The request type to resolve
+
+        Returns:
+            The handler instance (resolved from DI container)
+
+        Raises:
+            HandlerNotRegisteredError: If no async handler is registered
+        """
+        handler_type = self._async.get(request_type)
+        if handler_type is None:
+            raise HandlerNotRegisteredError(
+                f"No async handler registered for {request_type.__name__}"
+            )
+        return self._container.resolve(handler_type)

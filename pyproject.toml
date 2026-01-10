@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cqrs-framing"
+version = "0.1.1"
+description = "Python CQRS + Domain Events Framework inspired by CommandQuery.Framing"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = [
+    "di-done-right>=0.1.0",
+]
+authors = [
+    {name = "CQRS Framing Maintainers"}
+]
+keywords = ["cqrs", "domain-events", "command-query", "ddd", "event-driven"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+
+
+# Note: Add real URLs (repository/docs) before publishing.
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cqrs_framing = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["Tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
+ignore = ["E203", "E501"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.coverage.run]
+source = ["cqrs_framing"]
+
+[tool.coverage.report]
+skip_covered = true
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["di_container", "di_container.*"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]

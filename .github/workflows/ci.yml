@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e .
+
+      - name: Type check
+        run: |
+          python -m mypy src/cqrs_framing
+
+      - name: Lint (minimal)
+        run: |
+          python -m ruff check src
+
+      - name: Format check
+        run: |
+          python -m black --check .
+
+      - name: Tests
+        run: |
+          python -m pytest Tests/ --cov=cqrs_framing --cov-report=term-missing
