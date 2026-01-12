@@ -39,9 +39,7 @@ class User(AggregateRoot):
         self.user_id = user_id
         self.username = username
         self.email = email
-        self._raise(
-            UserCreated(user_id=user_id, username=username, email=email)
-        )
+        self._raise(UserCreated(user_id=user_id, username=username, email=email))
 
     def update_username(self, new_username: str):
         self.username = new_username
@@ -85,20 +83,14 @@ class CreateUserHandler(AsyncHandler[CreateUserCommand, User]):
     def __init__(self, repository: UserRepository):
         self.repository = repository
 
-    async def execute(
-        self, command: CreateUserCommand, cancellation_token
-    ) -> User:
+    async def execute(self, command: CreateUserCommand, cancellation_token) -> User:
         user = User(command.user_id, command.username, command.email)
         self.repository.save(user)
         return user
 
 
-class UpdateUsernameHandler(
-    AsyncHandler[UpdateUsernameCommand, CommandResponse[User]]
-):
-    def __init__(
-        self, repository: UserRepository, dispatcher: DomainEventDispatcher
-    ):
+class UpdateUsernameHandler(AsyncHandler[UpdateUsernameCommand, CommandResponse[User]]):
+    def __init__(self, repository: UserRepository, dispatcher: DomainEventDispatcher):
         self.repository = repository
         self.dispatcher = dispatcher
 
@@ -161,9 +153,7 @@ async def test_full_cqrs_flow():
 
     # Execute create command
     user = await broker.handle_async(
-        CreateUserCommand(
-            user_id="123", username="john", email="john@example.com"
-        )
+        CreateUserCommand(user_id="123", username="john", email="john@example.com")
     )
 
     assert isinstance(user, User)

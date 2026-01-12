@@ -49,9 +49,7 @@ class Order(AggregateRoot):
 
         # Raise domain event
         self._raise(
-            OrderCreated(
-                order_id=order_id, customer_name=customer_name, total=total
-            )
+            OrderCreated(order_id=order_id, customer_name=customer_name, total=total)
         )
 
     def ship(self, tracking_number: str):
@@ -64,9 +62,7 @@ class Order(AggregateRoot):
 
         # Raise domain event
         self._raise(
-            OrderShipped(
-                order_id=self.order_id, tracking_number=tracking_number
-            )
+            OrderShipped(order_id=self.order_id, tracking_number=tracking_number)
         )
 
 
@@ -121,9 +117,7 @@ class CreateOrderHandler(AsyncHandler[CreateOrder, Order]):
 class ShipOrderHandler(AsyncHandler[ShipOrder, CommandResponse[Order]]):
     """Handler for shipping orders."""
 
-    def __init__(
-        self, repository: OrderRepository, dispatcher: DomainEventDispatcher
-    ):
+    def __init__(self, repository: OrderRepository, dispatcher: DomainEventDispatcher):
         self.repository = repository
         self.dispatcher = dispatcher
 
@@ -157,10 +151,7 @@ class EmailService:
     async def on_order_shipped(self, event: OrderShipped):
         """Send shipping notification when order is shipped."""
         print("📧 Sending shipping notification")
-        print(
-            f"   Order ID: {event.order_id}, "
-            f"Tracking: {event.tracking_number}"
-        )
+        print(f"   Order ID: {event.order_id}, " f"Tracking: {event.tracking_number}")
 
 
 class InventoryService:

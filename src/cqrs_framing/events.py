@@ -48,15 +48,10 @@ class Event(Generic[T]):
         Returns:
             Self for fluent chaining
         """
-        if (
-            inspect.ismethod(handler)
-            and getattr(handler, "__self__", None) is not None
-        ):
+        if inspect.ismethod(handler) and getattr(handler, "__self__", None) is not None:
             # Bound instance method: keep weak ref to avoid
             # retaining the instance.
-            self._handlers.append(
-                weakref.WeakMethod(cast(Callable[[T], Any], handler))
-            )
+            self._handlers.append(weakref.WeakMethod(cast(Callable[[T], Any], handler)))
         else:
             # Function / lambda / staticmethod
             self._handlers.append(handler)
@@ -91,9 +86,7 @@ class Event(Generic[T]):
         dead: list[int] = []
 
         try:
-            running_loop: asyncio.AbstractEventLoop | None = (
-                asyncio.get_running_loop()
-            )
+            running_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
         except RuntimeError:
             running_loop = None
 

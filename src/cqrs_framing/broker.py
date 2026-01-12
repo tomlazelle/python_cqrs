@@ -101,9 +101,7 @@ class Broker:
 
         # Domain events: if the handler returned an AggregateRoot,
         # dispatch its events.
-        if self._domain_dispatcher is not None and isinstance(
-            result, AggregateRoot
-        ):
+        if self._domain_dispatcher is not None and isinstance(result, AggregateRoot):
             self._domain_dispatcher.dispatch_from(result)
 
         return result
@@ -161,9 +159,7 @@ class Broker:
         else:
             result = await terminal(ctx)
 
-        if self._domain_dispatcher is not None and isinstance(
-            result, AggregateRoot
-        ):
+        if self._domain_dispatcher is not None and isinstance(result, AggregateRoot):
             await self._domain_dispatcher.dispatch_from_async(result)
 
         return result
