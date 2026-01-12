@@ -40,18 +40,12 @@ class User(AggregateRoot):
         self.username = username
         self.email = email
         self._raise(
-            UserCreated(
-                user_id=user_id, username=username, email=email
-            )
+            UserCreated(user_id=user_id, username=username, email=email)
         )
 
     def update_username(self, new_username: str):
         self.username = new_username
-        self._raise(
-            UserUpdated(
-                user_id=self.user_id, username=new_username
-            )
-        )
+        self._raise(UserUpdated(user_id=self.user_id, username=new_username))
 
 
 # Commands
@@ -103,8 +97,7 @@ class UpdateUsernameHandler(
     AsyncHandler[UpdateUsernameCommand, CommandResponse[User]]
 ):
     def __init__(
-        self, repository: UserRepository,
-        dispatcher: DomainEventDispatcher
+        self, repository: UserRepository, dispatcher: DomainEventDispatcher
     ):
         self.repository = repository
         self.dispatcher = dispatcher
@@ -146,12 +139,8 @@ async def test_full_cqrs_flow():
     broker = Broker(registry, domain_dispatcher=dispatcher)
 
     # Register services in DI container
-    registry.container.register_instance(
-        UserRepository, repository
-    )
-    registry.container.register_instance(
-        DomainEventDispatcher, dispatcher
-    )
+    registry.container.register_instance(UserRepository, repository)
+    registry.container.register_instance(DomainEventDispatcher, dispatcher)
 
     # Register handlers (will be resolved with dependencies)
     registry.register(CreateUserCommand, CreateUserHandler)
@@ -173,8 +162,7 @@ async def test_full_cqrs_flow():
     # Execute create command
     user = await broker.handle_async(
         CreateUserCommand(
-            user_id="123", username="john",
-            email="john@example.com"
+            user_id="123", username="john", email="john@example.com"
         )
     )
 

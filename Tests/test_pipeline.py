@@ -79,7 +79,13 @@ async def test_pipeline_multiple_middleware():
 
     await pipeline.run(ctx, terminal)
 
-    assert calls == ["m1-before", "m2-before", "terminal", "m2-after", "m1-after"]
+    assert calls == [
+        "m1-before",
+        "m2-before",
+        "terminal",
+        "m2-after",
+        "m1-after",
+    ]
 
 
 @pytest.mark.asyncio

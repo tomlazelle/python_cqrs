@@ -82,8 +82,7 @@ def _validate_handler_signature(
             # Check if extra params have defaults
             extra_params = params[2:]
             if not all(
-                p.default != inspect.Parameter.empty
-                for p in extra_params
+                p.default != inspect.Parameter.empty for p in extra_params
             ):
                 raise InvalidHandlerSignatureError(
                     f"Async handler {handler_type.__name__}.execute() "
@@ -104,8 +103,7 @@ def _validate_handler_signature(
         if len(params) > 1:
             extra_params = params[1:]
             if not all(
-                p.default != inspect.Parameter.empty
-                for p in extra_params
+                p.default != inspect.Parameter.empty for p in extra_params
             ):
                 raise InvalidHandlerSignatureError(
                     f"Sync handler {handler_type.__name__}.execute() "
@@ -239,9 +237,7 @@ class HandlerRegistry:
                 )
             self._sync[request_type] = handler_type
 
-    def resolve_sync(
-        self, request_type: type[Any]
-    ) -> Any:
+    def resolve_sync(self, request_type: type[Any]) -> Any:
         """
         Resolve a synchronous handler for the given request type.
 

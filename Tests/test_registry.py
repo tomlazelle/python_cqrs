@@ -25,8 +25,7 @@ class SyncTestHandler(Handler[_Request, str]):
 
 class AsyncTestHandler(AsyncHandler[_Request, str]):
     async def execute(
-        self, message: _Request,
-        cancellation_token: CancellationToken
+        self, message: _Request, cancellation_token: CancellationToken
     ) -> str:
         return "async result"
 
@@ -145,9 +144,7 @@ def test_handler_without_inheritance_raises():
         def execute(self, message: _Request) -> str:
             return "result"
 
-    with pytest.raises(
-        InvalidHandlerSignatureError, match="must inherit from"
-    ):
+    with pytest.raises(InvalidHandlerSignatureError, match="must inherit from"):
         registry.register(_Request, InvalidHandler)
 
 
@@ -161,9 +158,7 @@ def test_invalid_async_handler_signature_no_cancellation_token():
         async def execute(self, message: _Request) -> str:  # type: ignore
             return "result"
 
-    with pytest.raises(
-        InvalidHandlerSignatureError, match="Found 1 parameter"
-    ):
+    with pytest.raises(InvalidHandlerSignatureError, match="Found 1 parameter"):
         registry.register(_Request, InvalidAsyncHandler)
 
 
@@ -175,9 +170,7 @@ def test_invalid_async_handler_signature_no_params():
         async def execute(self) -> str:  # type: ignore
             return "result"
 
-    with pytest.raises(
-        InvalidHandlerSignatureError, match="Found 0 parameter"
-    ):
+    with pytest.raises(InvalidHandlerSignatureError, match="Found 0 parameter"):
         registry.register(_Request, InvalidAsyncHandler)
 
 
@@ -191,9 +184,7 @@ def test_invalid_sync_handler_signature_no_params():
         def execute(self) -> str:  # type: ignore
             return "result"
 
-    with pytest.raises(
-        InvalidHandlerSignatureError, match="Found 0 parameter"
-    ):
+    with pytest.raises(InvalidHandlerSignatureError, match="Found 0 parameter"):
         registry.register(_Request, InvalidSyncHandler)
 
 
@@ -205,8 +196,10 @@ def test_valid_async_handler_with_optional_params():
 
     class ValidAsyncHandler(AsyncHandler[_Request, str]):
         async def execute(
-            self, message: _Request,
-            cancellation_token: CancellationToken, logger=None
+            self,
+            message: _Request,
+            cancellation_token: CancellationToken,
+            logger=None,
         ) -> str:
             return "result"
 
@@ -222,8 +215,10 @@ def test_invalid_async_handler_with_extra_required_params():
 
     class InvalidAsyncHandler(AsyncHandler[_Request, str]):
         async def execute(
-            self, message: _Request,
-            cancellation_token: CancellationToken, logger
+            self,
+            message: _Request,
+            cancellation_token: CancellationToken,
+            logger,
         ) -> str:  # type: ignore
             return "result"
 

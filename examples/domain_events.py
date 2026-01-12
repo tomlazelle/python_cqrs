@@ -50,9 +50,7 @@ class Order(AggregateRoot):
         # Raise domain event
         self._raise(
             OrderCreated(
-                order_id=order_id,
-                customer_name=customer_name,
-                total=total
+                order_id=order_id, customer_name=customer_name, total=total
             )
         )
 
@@ -67,8 +65,7 @@ class Order(AggregateRoot):
         # Raise domain event
         self._raise(
             OrderShipped(
-                order_id=self.order_id,
-                tracking_number=tracking_number
+                order_id=self.order_id, tracking_number=tracking_number
             )
         )
 
@@ -114,23 +111,18 @@ class CreateOrderHandler(AsyncHandler[CreateOrder, Order]):
     def __init__(self, repository: OrderRepository):
         self.repository = repository
 
-    async def execute(
-        self, command: CreateOrder, cancellation_token
-    ) -> Order:
+    async def execute(self, command: CreateOrder, cancellation_token) -> Order:
         """Execute the create order command."""
         order = Order(command.order_id, command.customer_name, command.total)
         self.repository.save(order)
         return order
 
 
-class ShipOrderHandler(
-    AsyncHandler[ShipOrder, CommandResponse[Order]]
-):
+class ShipOrderHandler(AsyncHandler[ShipOrder, CommandResponse[Order]]):
     """Handler for shipping orders."""
 
     def __init__(
-        self, repository: OrderRepository,
-        dispatcher: DomainEventDispatcher
+        self, repository: OrderRepository, dispatcher: DomainEventDispatcher
     ):
         self.repository = repository
         self.dispatcher = dispatcher
@@ -203,12 +195,8 @@ async def main():
     broker = Broker(registry, domain_dispatcher=dispatcher)
 
     # Register services in DI container
-    registry.container.register_instance(
-        OrderRepository, repository
-    )
-    registry.container.register_instance(
-        DomainEventDispatcher, dispatcher
-    )
+    registry.container.register_instance(OrderRepository, repository)
+    registry.container.register_instance(DomainEventDispatcher, dispatcher)
 
     # Register handlers (dependencies will be auto-injected)
     registry.register(CreateOrder, CreateOrderHandler)
@@ -228,11 +216,7 @@ async def main():
     # Create an order
     print("Creating order...\n")
     order = await broker.handle_async(
-        CreateOrder(
-            order_id="ORD-001",
-            customer_name="John Doe",
-            total=149.99
-        )
+        CreateOrder(order_id="ORD-001", customer_name="John Doe", total=149.99)
     )
     print(f"\n✓ Order created: {order.order_id}\n")
 

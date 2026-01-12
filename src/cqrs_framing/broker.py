@@ -92,14 +92,10 @@ class Broker:
                     "Broker.handle(...) from a non-async context."
                 )
 
-            async def terminal_async(
-                c: HandlerContext[Any, Any]
-            ) -> Any:
+            async def terminal_async(c: HandlerContext[Any, Any]) -> Any:
                 return terminal(c)
 
-            result = asyncio.run(
-                self._sync_pipeline.run(ctx, terminal_async)
-            )
+            result = asyncio.run(self._sync_pipeline.run(ctx, terminal_async))
         else:
             result = terminal(ctx)
 
@@ -143,18 +139,14 @@ class Broker:
             cancellation_token=cancellation_token,
         )
 
-        async def terminal(
-            c: AsyncHandlerContext[Any, Any]
-        ) -> Any:
+        async def terminal(c: AsyncHandlerContext[Any, Any]) -> Any:
             if not c.should_continue:
                 return c.response
             if c.cancellation_token:
                 c.cancellation_token.throw_if_cancelled()
             handler = self._registry.resolve_async(type(c.request))
             try:
-                result = await handler.execute(
-                    c.request, c.cancellation_token
-                )
+                result = await handler.execute(c.request, c.cancellation_token)
                 c.response = result
                 c.success = True
                 return result

@@ -48,9 +48,10 @@ class Event(Generic[T]):
         Returns:
             Self for fluent chaining
         """
-        if inspect.ismethod(handler) and getattr(
-            handler, "__self__", None
-        ) is not None:
+        if (
+            inspect.ismethod(handler)
+            and getattr(handler, "__self__", None) is not None
+        ):
             # Bound instance method: keep weak ref to avoid
             # retaining the instance.
             self._handlers.append(

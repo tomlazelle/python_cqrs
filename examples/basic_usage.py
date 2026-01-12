@@ -35,9 +35,7 @@ products = {}
 
 
 # Define handlers
-class CreateProductHandler(
-    AsyncHandler[CreateProduct, CommandResponse[str]]
-):
+class CreateProductHandler(AsyncHandler[CreateProduct, CommandResponse[str]]):
     """Handler for creating products."""
 
     async def execute(

@@ -31,12 +31,9 @@ class SyncCommandHandler(Handler[_Command, CommandResponse[str]]):
         return Response.ok(f"sync: {message.value}")
 
 
-class AsyncCommandHandler(
-    AsyncHandler[_Command, CommandResponse[str]]
-):
+class AsyncCommandHandler(AsyncHandler[_Command, CommandResponse[str]]):
     async def execute(
-        self, message: _Command,
-        cancellation_token: CancellationToken
+        self, message: _Command, cancellation_token: CancellationToken
     ) -> CommandResponse[str]:
         return Response.ok(f"async: {message.value}")
 
@@ -151,12 +148,9 @@ async def test_broker_with_domain_dispatcher():
 async def test_broker_cancellation():
     """Test broker respecting cancellation token."""
 
-    class SlowHandler(
-        AsyncHandler[_Command, CommandResponse[str]]
-    ):
+    class SlowHandler(AsyncHandler[_Command, CommandResponse[str]]):
         async def execute(
-            self, message: _Command,
-            cancellation_token: CancellationToken
+            self, message: _Command, cancellation_token: CancellationToken
         ) -> CommandResponse[str]:
             cancellation_token.throw_if_cancelled()
             return Response.ok("done")
