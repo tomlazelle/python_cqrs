@@ -1,4 +1,6 @@
-"""Handler registry using DI container for request type to handler mapping."""
+"""Handler registry using DI container for request type to
+handler mapping.
+"""
 
 from __future__ import annotations
 
@@ -20,8 +22,102 @@ class DuplicateHandlerError(RuntimeError):
     pass
 
 
+class InvalidHandlerSignatureError(TypeError):
+    """Raised when a handler's execute method has an invalid signature."""
+
+    pass
+
+
+def _validate_handler_signature(
+    handler_type: type[Any], execute_method: Any
+) -> None:
+    """
+    Validate that a handler's execute method has the correct signature.
+
+    Args:
+        handler_type: The handler class being validated
+        execute_method: The execute method to validate
+
+    Raises:
+        InvalidHandlerSignatureError: If the signature is invalid
+    """
+    # Import here to avoid circular dependency
+    from .handlers import AsyncHandler, Handler
+
+    # Check if handler inherits from base classes
+    is_async_handler = issubclass(handler_type, AsyncHandler)
+    is_sync_handler = issubclass(handler_type, Handler)
+
+    if not is_async_handler and not is_sync_handler:
+        raise InvalidHandlerSignatureError(
+            f"Handler {handler_type.__name__} must inherit from "
+            f"either cqrs_framing.Handler or "
+            f"cqrs_framing.AsyncHandler. Import and inherit from "
+            f"the appropriate base class."
+        )
+
+    sig = inspect.signature(execute_method)
+    params = list(sig.parameters.values())
+
+    # Remove 'self' or 'cls' if present
+    if params and params[0].name in ("self", "cls"):
+        params = params[1:]
+
+    is_async = inspect.iscoroutinefunction(execute_method)
+
+    if is_async:
+        # Async handler must have exactly 2 parameters:
+        # (message, cancellation_token)
+        if len(params) < 2:
+            raise InvalidHandlerSignatureError(
+                f"Async handler {handler_type.__name__}.execute() "
+                f"must have signature: execute(self, message: "
+                f"TRequest, cancellation_token: CancellationToken) "
+                f"-> TResponse. Found {len(params)} parameter(s) "
+                f"after 'self': {[p.name for p in params]}"
+            )
+        # Allow extra optional parameters, but first 2 must be
+        # present
+        if len(params) > 2:
+            # Check if extra params have defaults
+            extra_params = params[2:]
+            if not all(
+                p.default != inspect.Parameter.empty
+                for p in extra_params
+            ):
+                raise InvalidHandlerSignatureError(
+                    f"Async handler {handler_type.__name__}.execute() "
+                    f"has extra required parameters. Only (message, "
+                    f"cancellation_token) are required. Extra params "
+                    f"must have defaults."
+                )
+    else:
+        # Sync handler must have exactly 1 parameter: (message)
+        if len(params) < 1:
+            raise InvalidHandlerSignatureError(
+                f"Sync handler {handler_type.__name__}.execute() "
+                f"must have signature: execute(self, message: "
+                f"TRequest) -> TResponse. Found {len(params)} "
+                f"parameter(s) after 'self'."
+            )
+        # Allow extra optional parameters
+        if len(params) > 1:
+            extra_params = params[1:]
+            if not all(
+                p.default != inspect.Parameter.empty
+                for p in extra_params
+            ):
+                raise InvalidHandlerSignatureError(
+                    f"Sync handler {handler_type.__name__}.execute() "
+                    f"has extra required parameters. Only (message) "
+                    f"is required. Extra params must have defaults."
+                )
+
+
 class HandlerRegistry:
-    """Registry that maps request types to handlers using DI container."""
+    """Registry that maps request types to handlers using DI
+    container.
+    """
 
     def __init__(self, container: DIContainer | None = None) -> None:
         """
@@ -40,11 +136,14 @@ class HandlerRegistry:
         """Get the underlying DI container."""
         return self._container
 
-    def register(self, request_type: type[Any], handler_type: type[Any]) -> None:
+    def register(
+        self, request_type: type[Any], handler_type: type[Any]
+    ) -> None:
         """
         Register a handler type for a request type.
 
-        The handler will be resolved from the DI container when needed.
+        The handler will be resolved from the DI container when
+        needed.
 
         Args:
             request_type: The type of request this handler processes
@@ -53,13 +152,21 @@ class HandlerRegistry:
 
         Raises:
             TypeError: If handler doesn't have an execute method
-            DuplicateHandlerError: If a handler is already registered for this
-                request type
+            InvalidHandlerSignatureError: If execute method signature
+                is invalid
+            DuplicateHandlerError: If a handler is already registered
+                for this request type
         """
         # Check if handler has execute method
         execute = getattr(handler_type, "execute", None)
         if execute is None:
-            raise TypeError("Handler must provide an execute(...) method")
+            raise TypeError(
+                f"Handler {handler_type.__name__} must provide an "
+                f"execute(...) method"
+            )
+
+        # Validate the execute method signature
+        _validate_handler_signature(handler_type, execute)
 
         # Register handler type in container if not already registered
         if not self._container.is_registered(handler_type):
@@ -69,21 +176,26 @@ class HandlerRegistry:
         if inspect.iscoroutinefunction(execute):
             if request_type in self._async:
                 raise DuplicateHandlerError(
-                    f"Async handler already registered for " f"{request_type.__name__}"
+                    f"Async handler already registered for "
+                    f"{request_type.__name__}"
                 )
             self._async[request_type] = handler_type
         else:
             if request_type in self._sync:
                 raise DuplicateHandlerError(
-                    f"Sync handler already registered for " f"{request_type.__name__}"
+                    f"Sync handler already registered for "
+                    f"{request_type.__name__}"
                 )
             self._sync[request_type] = handler_type
 
-    def register_instance(self, request_type: type[Any], handler_instance: Any) -> None:
+    def register_instance(
+        self, request_type: type[Any], handler_instance: Any
+    ) -> None:
         """
         Register a pre-instantiated handler instance.
 
-        Use this for handlers that don't need DI or when you want full control.
+        Use this for handlers that don't need DI or when you want
+        full control.
 
         Args:
             request_type: The type of request this handler processes
@@ -91,14 +203,22 @@ class HandlerRegistry:
 
         Raises:
             TypeError: If handler doesn't have an execute method
-            DuplicateHandlerError: If a handler is already registered for this
-                request type
+            InvalidHandlerSignatureError: If execute method signature
+                is invalid
+            DuplicateHandlerError: If a handler is already registered
+                for this request type
         """
         execute = getattr(handler_instance, "execute", None)
         if execute is None:
-            raise TypeError("Handler must provide an execute(...) method")
+            raise TypeError(
+                f"Handler {type(handler_instance).__name__} must "
+                f"provide an execute(...) method"
+            )
 
         handler_type = type(handler_instance)
+
+        # Validate the execute method signature
+        _validate_handler_signature(handler_type, execute)
 
         # Register as singleton instance in container
         self._container.register_instance(handler_type, handler_instance)
@@ -107,17 +227,21 @@ class HandlerRegistry:
         if inspect.iscoroutinefunction(execute):
             if request_type in self._async:
                 raise DuplicateHandlerError(
-                    f"Async handler already registered for " f"{request_type.__name__}"
+                    f"Async handler already registered for "
+                    f"{request_type.__name__}"
                 )
             self._async[request_type] = handler_type
         else:
             if request_type in self._sync:
                 raise DuplicateHandlerError(
-                    f"Sync handler already registered for " f"{request_type.__name__}"
+                    f"Sync handler already registered for "
+                    f"{request_type.__name__}"
                 )
             self._sync[request_type] = handler_type
 
-    def resolve_sync(self, request_type: type[Any]) -> Any:
+    def resolve_sync(
+        self, request_type: type[Any]
+    ) -> Any:
         """
         Resolve a synchronous handler for the given request type.
 

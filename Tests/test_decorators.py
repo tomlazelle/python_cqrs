@@ -3,6 +3,7 @@
 import pytest
 
 from cqrs_framing import (
+    Handler,
     HandlerRegistry,
     Message,
     handler,
@@ -20,7 +21,7 @@ def test_handler_decorator_registration():
     set_default_registry(registry)
 
     @handler(DecoratorTestCommand)
-    class TestHandler:
+    class TestHandler(Handler[DecoratorTestCommand, str]):
         def execute(self, message: DecoratorTestCommand) -> str:
             return "handled"
 
@@ -43,13 +44,12 @@ def test_handler_decorator_without_registry():
     with pytest.raises(RuntimeError, match="Default registry not set"):
 
         @handler(AnotherCommand)
-        class TestHandler:
+        class TestHandler(Handler[AnotherCommand, str]):
             def execute(self, message: AnotherCommand) -> str:
                 return "handled"
 
 
 def test_handler_decorator_creates_instance():
-    """Test that decorator creates handler instance."""
     registry = HandlerRegistry()
     set_default_registry(registry)
 
@@ -57,7 +57,7 @@ def test_handler_decorator_creates_instance():
         pass
 
     @handler(YetAnotherCommand)
-    class TestHandler:
+    class TestHandler(Handler[YetAnotherCommand, str]):
         def __init__(self):
             self.created = True
 

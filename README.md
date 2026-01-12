@@ -21,6 +21,30 @@ pip install cqrs-framing
 
 ## Quick Start
 
+### Handler Contract
+
+All handlers **must** inherit from either `Handler` (sync) or `AsyncHandler` (async):
+
+```python
+from cqrs_framing import Handler, AsyncHandler, CancellationToken
+
+# Synchronous handler
+class MySyncHandler(Handler[MyCommand, str]):
+    def execute(self, message: MyCommand) -> str:
+        return "result"
+
+# Asynchronous handler
+class MyAsyncHandler(AsyncHandler[MyCommand, str]):
+    async def execute(self, message: MyCommand, cancellation_token: CancellationToken) -> str:
+        return "result"
+```
+
+**Why inheritance is required:**
+- ✅ Clear contract discovery in IDEs (autocomplete, hints)
+- ✅ Type checker enforcement (mypy/Pylance catches errors)
+- ✅ Registration-time validation (fails fast if signature is wrong)
+- ✅ Prevents accidental direct invocation bypassing the broker
+
 ### Define Messages and Handlers
 
 ```python
@@ -32,7 +56,7 @@ class CreateUser(Message):
     username: str
     email: str
 
-class CreateUserHandler:
+class CreateUserHandler(AsyncHandler[CreateUser, CommandResponse[str]]):
     async def execute(self, message: CreateUser, cancellation_token: CancellationToken) -> CommandResponse[str]:
         # Your business logic here
         user_id = f"user-{message.username}"
@@ -67,7 +91,7 @@ result = await broker.handle_async(CreateUser(username="john", email="john@examp
 class UserRepository:
     def save(self, user): ...
 
-class CreateUserHandler:
+class CreateUserHandler(AsyncHandler[CreateUser, CommandResponse[str]]):
     def __init__(self, repository: UserRepository):
         self.repository = repository
     

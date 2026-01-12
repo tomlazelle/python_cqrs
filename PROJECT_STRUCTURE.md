@@ -53,9 +53,27 @@ python_cqrs/
 ### Core Abstractions
 
 1. **Message**: Base class for all commands and queries
-2. **Handler/AsyncHandler**: Protocols for sync/async handlers
+2. **Handler/AsyncHandler**: Abstract base classes that all handlers must inherit from
 3. **HandlerRegistry**: Maps request types to handlers using DI container
 4. **Broker**: Central dispatcher for commands and queries
+
+**Handler Contract:**
+All handlers must inherit from `Handler` (sync) or `AsyncHandler` (async) and implement the `execute` method:
+
+```python
+from cqrs_framing import AsyncHandler, CancellationToken
+
+class MyCommandHandler(AsyncHandler[MyCommand, MyResponse]):
+    async def execute(self, message: MyCommand, cancellation_token: CancellationToken) -> MyResponse:
+        # Handler logic
+        pass
+```
+
+This inheritance requirement ensures:
+- IDE support (autocomplete, type hints)
+- Type checking validation
+- Registration-time signature verification
+- Protection against accidental direct handler invocation
 
 ### Dependency Injection
 
@@ -144,10 +162,12 @@ pip install -e .
 
 ```python
 from cqrs_framing import (
+    AsyncHandler,
     Broker,
+    CancellationToken,
+    CommandResponse,
     HandlerRegistry,
     Message,
-    CommandResponse,
     Response,
 )
 
@@ -156,15 +176,15 @@ class CreateUser(Message):
     def __init__(self, username: str):
         self.username = username
 
-# 2. Define your handler
-class CreateUserHandler:
-    async def execute(self, command, cancellation_token):
+# 2. Define your handler (must inherit from AsyncHandler)
+class CreateUserHandler(AsyncHandler[CreateUser, CommandResponse[str]]):
+    async def execute(self, command: CreateUser, cancellation_token: CancellationToken) -> CommandResponse[str]:
         # Business logic here
         return Response.ok(f"User {command.username} created")
 
 # 3. Register and execute
 registry = HandlerRegistry()
-registry.register(CreateUser, CreateUserHandler())
+registry.register(CreateUser, CreateUserHandler)
 broker = Broker(registry)
 
 result = await broker.handle_async(CreateUser("john"))

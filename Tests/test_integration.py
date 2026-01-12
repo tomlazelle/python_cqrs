@@ -6,6 +6,7 @@ import pytest
 
 from cqrs_framing import (
     AggregateRoot,
+    AsyncHandler,
     Broker,
     CommandResponse,
     DomainEvent,
@@ -38,11 +39,19 @@ class User(AggregateRoot):
         self.user_id = user_id
         self.username = username
         self.email = email
-        self._raise(UserCreated(user_id=user_id, username=username, email=email))
+        self._raise(
+            UserCreated(
+                user_id=user_id, username=username, email=email
+            )
+        )
 
     def update_username(self, new_username: str):
         self.username = new_username
-        self._raise(UserUpdated(user_id=self.user_id, username=new_username))
+        self._raise(
+            UserUpdated(
+                user_id=self.user_id, username=new_username
+            )
+        )
 
 
 # Commands
@@ -78,18 +87,25 @@ class UserRepository:
 
 
 # Handlers
-class CreateUserHandler:
+class CreateUserHandler(AsyncHandler[CreateUserCommand, User]):
     def __init__(self, repository: UserRepository):
         self.repository = repository
 
-    async def execute(self, command: CreateUserCommand, cancellation_token) -> User:
+    async def execute(
+        self, command: CreateUserCommand, cancellation_token
+    ) -> User:
         user = User(command.user_id, command.username, command.email)
         self.repository.save(user)
         return user
 
 
-class UpdateUsernameHandler:
-    def __init__(self, repository: UserRepository, dispatcher: DomainEventDispatcher):
+class UpdateUsernameHandler(
+    AsyncHandler[UpdateUsernameCommand, CommandResponse[User]]
+):
+    def __init__(
+        self, repository: UserRepository,
+        dispatcher: DomainEventDispatcher
+    ):
         self.repository = repository
         self.dispatcher = dispatcher
 
@@ -106,7 +122,7 @@ class UpdateUsernameHandler:
         return Response.ok(user)
 
 
-class GetUserHandler:
+class GetUserHandler(AsyncHandler[GetUserQuery, CommandResponse[User]]):
     def __init__(self, repository: UserRepository):
         self.repository = repository
 
@@ -130,8 +146,12 @@ async def test_full_cqrs_flow():
     broker = Broker(registry, domain_dispatcher=dispatcher)
 
     # Register services in DI container
-    registry.container.register_instance(UserRepository, repository)
-    registry.container.register_instance(DomainEventDispatcher, dispatcher)
+    registry.container.register_instance(
+        UserRepository, repository
+    )
+    registry.container.register_instance(
+        DomainEventDispatcher, dispatcher
+    )
 
     # Register handlers (will be resolved with dependencies)
     registry.register(CreateUserCommand, CreateUserHandler)
@@ -152,7 +172,10 @@ async def test_full_cqrs_flow():
 
     # Execute create command
     user = await broker.handle_async(
-        CreateUserCommand(user_id="123", username="john", email="john@example.com")
+        CreateUserCommand(
+            user_id="123", username="john",
+            email="john@example.com"
+        )
     )
 
     assert isinstance(user, User)

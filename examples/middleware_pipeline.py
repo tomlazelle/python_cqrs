@@ -65,14 +65,18 @@ async def validation_middleware(ctx: AsyncHandlerContext, next):
         if ctx.request.amount <= 0:
             print("✗ Validation failed: Invalid amount")
             ctx.should_continue = False
-            ctx.response = Response.failed("Amount must be greater than 0")
+            ctx.response = Response.failed(
+                "Amount must be greater than 0"
+            )
             return ctx.response
 
     result = await next(ctx)
     return result
 
 
-async def exception_handling_middleware(ctx: AsyncHandlerContext, next):
+async def exception_handling_middleware(
+    ctx: AsyncHandlerContext, next
+):
     """Handle exceptions gracefully."""
     try:
         result = await next(ctx)
@@ -85,7 +89,9 @@ async def exception_handling_middleware(ctx: AsyncHandlerContext, next):
         return ctx.response
 
 
-async def transaction_middleware(ctx: AsyncHandlerContext, next):
+async def transaction_middleware(
+    ctx: AsyncHandlerContext, next
+):
     """Simulate transaction management."""
     print("  ▶ BEGIN TRANSACTION")
     try:

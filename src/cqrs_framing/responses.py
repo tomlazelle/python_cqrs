@@ -38,4 +38,6 @@ class Response:
         """Create a failed response."""
         if isinstance(message, list):
             message = " ".join(message)
-        return CommandResponse(success=False, message=message, exception=exception)
+        return CommandResponse(
+            success=False, message=message, exception=exception
+        )

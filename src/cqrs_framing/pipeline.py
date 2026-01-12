@@ -14,8 +14,8 @@ class Pipeline(Generic[TContext]):
     """
     Pipeline for executing middleware in sequence.
 
-    Middleware are executed in the order they are added, with each middleware
-    responsible for calling the next one in the chain.
+    Middleware are executed in the order they are added, with each
+    middleware responsible for calling the next one in the chain.
     """
 
     def __init__(self) -> None:

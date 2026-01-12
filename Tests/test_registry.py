@@ -3,9 +3,13 @@
 import pytest
 
 from cqrs_framing import (
+    AsyncHandler,
+    CancellationToken,
     DuplicateHandlerError,
+    Handler,
     HandlerNotRegisteredError,
     HandlerRegistry,
+    InvalidHandlerSignatureError,
     Message,
 )
 
@@ -14,13 +18,16 @@ class _Request(Message):
     pass
 
 
-class SyncTestHandler:
+class SyncTestHandler(Handler[_Request, str]):
     def execute(self, message: _Request) -> str:
         return "sync result"
 
 
-class AsyncTestHandler:
-    async def execute(self, message: _Request, cancellation_token=None) -> str:
+class AsyncTestHandler(AsyncHandler[_Request, str]):
+    async def execute(
+        self, message: _Request,
+        cancellation_token: CancellationToken
+    ) -> str:
         return "async result"
 
 
@@ -58,7 +65,9 @@ def test_register_handler_instance():
 
 
 def test_register_handler_without_execute():
-    """Test that registering a handler without execute method raises TypeError."""
+    """Test that registering a handler without execute method raises
+    TypeError.
+    """
     registry = HandlerRegistry()
 
     with pytest.raises(TypeError, match="execute"):
@@ -108,7 +117,7 @@ def test_handler_with_dependencies():
         def get_value(self) -> str:
             return "service value"
 
-    class HandlerWithDeps:
+    class HandlerWithDeps(Handler[_Request, str]):
         def __init__(self, service: Service):
             self.service = service
 
@@ -124,3 +133,101 @@ def test_handler_with_dependencies():
     handler = registry.resolve_sync(_Request)
     assert isinstance(handler, HandlerWithDeps)
     assert handler.execute(_Request()) == "service value"
+
+
+def test_handler_without_inheritance_raises():
+    """Test that registering a handler without inheriting from base
+    class raises error.
+    """
+    registry = HandlerRegistry()
+
+    class InvalidHandler:
+        def execute(self, message: _Request) -> str:
+            return "result"
+
+    with pytest.raises(
+        InvalidHandlerSignatureError, match="must inherit from"
+    ):
+        registry.register(_Request, InvalidHandler)
+
+
+def test_invalid_async_handler_signature_no_cancellation_token():
+    """Test that async handler without cancellation_token parameter
+    raises error.
+    """
+    registry = HandlerRegistry()
+
+    class InvalidAsyncHandler(AsyncHandler[_Request, str]):
+        async def execute(self, message: _Request) -> str:  # type: ignore
+            return "result"
+
+    with pytest.raises(
+        InvalidHandlerSignatureError, match="Found 1 parameter"
+    ):
+        registry.register(_Request, InvalidAsyncHandler)
+
+
+def test_invalid_async_handler_signature_no_params():
+    """Test that async handler with no parameters raises error."""
+    registry = HandlerRegistry()
+
+    class InvalidAsyncHandler(AsyncHandler[_Request, str]):
+        async def execute(self) -> str:  # type: ignore
+            return "result"
+
+    with pytest.raises(
+        InvalidHandlerSignatureError, match="Found 0 parameter"
+    ):
+        registry.register(_Request, InvalidAsyncHandler)
+
+
+def test_invalid_sync_handler_signature_no_params():
+    """Test that sync handler with no message parameter raises
+    error.
+    """
+    registry = HandlerRegistry()
+
+    class InvalidSyncHandler(Handler[_Request, str]):
+        def execute(self) -> str:  # type: ignore
+            return "result"
+
+    with pytest.raises(
+        InvalidHandlerSignatureError, match="Found 0 parameter"
+    ):
+        registry.register(_Request, InvalidSyncHandler)
+
+
+def test_valid_async_handler_with_optional_params():
+    """Test that async handler with extra optional params is
+    accepted.
+    """
+    registry = HandlerRegistry()
+
+    class ValidAsyncHandler(AsyncHandler[_Request, str]):
+        async def execute(
+            self, message: _Request,
+            cancellation_token: CancellationToken, logger=None
+        ) -> str:
+            return "result"
+
+    # Should not raise
+    registry.register(_Request, ValidAsyncHandler)
+
+
+def test_invalid_async_handler_with_extra_required_params():
+    """Test that async handler with extra required params raises
+    error.
+    """
+    registry = HandlerRegistry()
+
+    class InvalidAsyncHandler(AsyncHandler[_Request, str]):
+        async def execute(
+            self, message: _Request,
+            cancellation_token: CancellationToken, logger
+        ) -> str:  # type: ignore
+            return "result"
+
+    with pytest.raises(
+        InvalidHandlerSignatureError, match="Extra params must have defaults"
+    ):
+        registry.register(_Request, InvalidAsyncHandler)

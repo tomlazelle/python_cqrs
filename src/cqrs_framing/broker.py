@@ -14,10 +14,11 @@ from .registry import HandlerRegistry
 
 class Broker:
     """
-    Central broker for dispatching commands and queries to their handlers.
+    Central broker for dispatching commands and queries to their
+    handlers.
 
-    Supports both synchronous and asynchronous execution with optional
-    middleware pipelines and domain event dispatching.
+    Supports both synchronous and asynchronous execution with
+    optional middleware pipelines and domain event dispatching.
     """
 
     def __init__(
@@ -85,21 +86,28 @@ class Broker:
                 pass
             else:
                 raise RuntimeError(
-                    "Broker.handle() cannot execute sync_pipeline while an "
-                    "event loop is running. Use Broker.handle_async(...) or "
-                    "call Broker.handle(...) from a non-async context."
+                    "Broker.handle() cannot execute sync_pipeline "
+                    "while an event loop is running. Use "
+                    "Broker.handle_async(...) or call "
+                    "Broker.handle(...) from a non-async context."
                 )
 
-            async def terminal_async(c: HandlerContext[Any, Any]) -> Any:
+            async def terminal_async(
+                c: HandlerContext[Any, Any]
+            ) -> Any:
                 return terminal(c)
 
-            result = asyncio.run(self._sync_pipeline.run(ctx, terminal_async))
+            result = asyncio.run(
+                self._sync_pipeline.run(ctx, terminal_async)
+            )
         else:
             result = terminal(ctx)
 
-        # Domain events: if the handler returned an AggregateRoot, dispatch
-        # its events.
-        if self._domain_dispatcher is not None and isinstance(result, AggregateRoot):
+        # Domain events: if the handler returned an AggregateRoot,
+        # dispatch its events.
+        if self._domain_dispatcher is not None and isinstance(
+            result, AggregateRoot
+        ):
             self._domain_dispatcher.dispatch_from(result)
 
         return result
@@ -135,14 +143,18 @@ class Broker:
             cancellation_token=cancellation_token,
         )
 
-        async def terminal(c: AsyncHandlerContext[Any, Any]) -> Any:
+        async def terminal(
+            c: AsyncHandlerContext[Any, Any]
+        ) -> Any:
             if not c.should_continue:
                 return c.response
             if c.cancellation_token:
                 c.cancellation_token.throw_if_cancelled()
             handler = self._registry.resolve_async(type(c.request))
             try:
-                result = await handler.execute(c.request, c.cancellation_token)
+                result = await handler.execute(
+                    c.request, c.cancellation_token
+                )
                 c.response = result
                 c.success = True
                 return result
@@ -157,7 +169,9 @@ class Broker:
         else:
             result = await terminal(ctx)
 
-        if self._domain_dispatcher is not None and isinstance(result, AggregateRoot):
+        if self._domain_dispatcher is not None and isinstance(
+            result, AggregateRoot
+        ):
             await self._domain_dispatcher.dispatch_from_async(result)
 
         return result

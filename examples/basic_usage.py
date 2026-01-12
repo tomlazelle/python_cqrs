@@ -35,7 +35,9 @@ products = {}
 
 
 # Define handlers
-class CreateProductHandler(AsyncHandler[CreateProduct, CommandResponse[str]]):
+class CreateProductHandler(
+    AsyncHandler[CreateProduct, CommandResponse[str]]
+):
     """Handler for creating products."""
 
     async def execute(
@@ -43,7 +45,9 @@ class CreateProductHandler(AsyncHandler[CreateProduct, CommandResponse[str]]):
     ) -> CommandResponse[str]:
         """Execute the create product command."""
         if command.product_id in products:
-            return Response.failed(f"Product {command.product_id} already exists")
+            return Response.failed(
+                f"Product {command.product_id} already exists"
+            )
 
         products[command.product_id] = {
             "name": command.name,

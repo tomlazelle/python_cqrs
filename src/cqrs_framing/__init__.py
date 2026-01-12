@@ -16,6 +16,7 @@ from .registry import (
     DuplicateHandlerError,
     HandlerNotRegisteredError,
     HandlerRegistry,
+    InvalidHandlerSignatureError,
 )
 from .responses import CommandResponse, Response
 
@@ -37,6 +38,7 @@ __all__ = [
     "HandlerRegistry",
     "HandlerNotRegisteredError",
     "DuplicateHandlerError",
+    "InvalidHandlerSignatureError",
     # Context
     "HandlerContext",
     "AsyncHandlerContext",

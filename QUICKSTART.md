@@ -20,12 +20,13 @@ Let's create a simple command to create a user:
 import asyncio
 from dataclasses import dataclass
 from cqrs_framing import (
+    AsyncHandler,
     Broker,
+    CancellationToken,
+    CommandResponse,
     HandlerRegistry,
     Message,
-    CommandResponse,
     Response,
-    CancellationToken,
 )
 
 # 1. Define your command
@@ -34,8 +35,8 @@ class CreateUser(Message):
     username: str
     email: str
 
-# 2. Define your handler
-class CreateUserHandler:
+# 2. Define your handler (must inherit from AsyncHandler)
+class CreateUserHandler(AsyncHandler[CreateUser, CommandResponse[str]]):
     async def execute(
         self, 
         command: CreateUser, 
@@ -77,8 +78,8 @@ class UserRepository:
         print(f"Saving user to database: {username}")
         return user_id
 
-# 2. Handler with dependency
-class CreateUserHandler:
+# 2. Handler with dependency (must inherit from AsyncHandler)
+class CreateUserHandler(AsyncHandler[CreateUser, CommandResponse[str]]):
     def __init__(self, repository: UserRepository):
         self.repository = repository
     
@@ -141,8 +142,8 @@ class User(AggregateRoot):
             email=email
         ))
 
-# 3. Update handler to return aggregate
-class CreateUserHandler:
+# 3. Update handler to return aggregate (must inherit from AsyncHandler)
+class CreateUserHandler(AsyncHandler[CreateUser, User]):
     async def execute(
         self, 
         command: CreateUser, 
@@ -164,7 +165,7 @@ async def main():
     hub[UserCreated] += send_welcome_email
     
     # Register and execute
-    registry.register(CreateUser, CreateUserHandler())
+    registry.register(CreateUser, CreateUserHandler)
     user = await broker.handle_async(
         CreateUser(username="john", email="john@example.com")
     )

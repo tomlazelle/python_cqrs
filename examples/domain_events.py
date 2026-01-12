@@ -49,7 +49,11 @@ class Order(AggregateRoot):
 
         # Raise domain event
         self._raise(
-            OrderCreated(order_id=order_id, customer_name=customer_name, total=total)
+            OrderCreated(
+                order_id=order_id,
+                customer_name=customer_name,
+                total=total
+            )
         )
 
     def ship(self, tracking_number: str):
@@ -62,7 +66,10 @@ class Order(AggregateRoot):
 
         # Raise domain event
         self._raise(
-            OrderShipped(order_id=self.order_id, tracking_number=tracking_number)
+            OrderShipped(
+                order_id=self.order_id,
+                tracking_number=tracking_number
+            )
         )
 
 
@@ -107,17 +114,24 @@ class CreateOrderHandler(AsyncHandler[CreateOrder, Order]):
     def __init__(self, repository: OrderRepository):
         self.repository = repository
 
-    async def execute(self, command: CreateOrder, cancellation_token) -> Order:
+    async def execute(
+        self, command: CreateOrder, cancellation_token
+    ) -> Order:
         """Execute the create order command."""
         order = Order(command.order_id, command.customer_name, command.total)
         self.repository.save(order)
         return order
 
 
-class ShipOrderHandler(AsyncHandler[ShipOrder, CommandResponse[Order]]):
+class ShipOrderHandler(
+    AsyncHandler[ShipOrder, CommandResponse[Order]]
+):
     """Handler for shipping orders."""
 
-    def __init__(self, repository: OrderRepository, dispatcher: DomainEventDispatcher):
+    def __init__(
+        self, repository: OrderRepository,
+        dispatcher: DomainEventDispatcher
+    ):
         self.repository = repository
         self.dispatcher = dispatcher
 
@@ -151,7 +165,10 @@ class EmailService:
     async def on_order_shipped(self, event: OrderShipped):
         """Send shipping notification when order is shipped."""
         print("📧 Sending shipping notification")
-        print(f"   Order ID: {event.order_id}, Tracking: {event.tracking_number}")
+        print(
+            f"   Order ID: {event.order_id}, "
+            f"Tracking: {event.tracking_number}"
+        )
 
 
 class InventoryService:
@@ -186,8 +203,12 @@ async def main():
     broker = Broker(registry, domain_dispatcher=dispatcher)
 
     # Register services in DI container
-    registry.container.register_instance(OrderRepository, repository)
-    registry.container.register_instance(DomainEventDispatcher, dispatcher)
+    registry.container.register_instance(
+        OrderRepository, repository
+    )
+    registry.container.register_instance(
+        DomainEventDispatcher, dispatcher
+    )
 
     # Register handlers (dependencies will be auto-injected)
     registry.register(CreateOrder, CreateOrderHandler)
@@ -207,7 +228,11 @@ async def main():
     # Create an order
     print("Creating order...\n")
     order = await broker.handle_async(
-        CreateOrder(order_id="ORD-001", customer_name="John Doe", total=149.99)
+        CreateOrder(
+            order_id="ORD-001",
+            customer_name="John Doe",
+            total=149.99
+        )
     )
     print(f"\n✓ Order created: {order.order_id}\n")
 

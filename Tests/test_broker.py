@@ -6,12 +6,14 @@ import pytest
 
 from cqrs_framing import (
     AggregateRoot,
+    AsyncHandler,
     Broker,
     CancellationToken,
     CommandResponse,
     DomainEvent,
     DomainEventDispatcher,
     EventHub,
+    Handler,
     HandlerRegistry,
     Message,
     Pipeline,
@@ -24,14 +26,17 @@ class _Command(Message):
         self.value = value
 
 
-class SyncCommandHandler:
+class SyncCommandHandler(Handler[_Command, CommandResponse[str]]):
     def execute(self, message: _Command) -> CommandResponse[str]:
         return Response.ok(f"sync: {message.value}")
 
 
-class AsyncCommandHandler:
+class AsyncCommandHandler(
+    AsyncHandler[_Command, CommandResponse[str]]
+):
     async def execute(
-        self, message: _Command, cancellation_token: CancellationToken
+        self, message: _Command,
+        cancellation_token: CancellationToken
     ) -> CommandResponse[str]:
         return Response.ok(f"async: {message.value}")
 
@@ -46,7 +51,7 @@ class _Aggregate(AggregateRoot):
         self._raise(_Event())
 
 
-class AggregateCommandHandler:
+class AggregateCommandHandler(AsyncHandler[_Command, _Aggregate]):
     async def execute(
         self, message: _Command, cancellation_token: CancellationToken
     ) -> _Aggregate:
@@ -89,7 +94,9 @@ def test_broker_handle_none_raises():
 
 @pytest.mark.asyncio
 async def test_sync_handle_sync_pipeline_in_running_loop_raises():
-    """Broker.handle should fail if it would call asyncio.run in a loop."""
+    """Broker.handle should fail if it would call asyncio.run in
+    a loop.
+    """
     registry = HandlerRegistry()
     registry.register(_Command, SyncCommandHandler)
 
@@ -144,9 +151,12 @@ async def test_broker_with_domain_dispatcher():
 async def test_broker_cancellation():
     """Test broker respecting cancellation token."""
 
-    class SlowHandler:
+    class SlowHandler(
+        AsyncHandler[_Command, CommandResponse[str]]
+    ):
         async def execute(
-            self, message: _Command, cancellation_token: CancellationToken
+            self, message: _Command,
+            cancellation_token: CancellationToken
         ) -> CommandResponse[str]:
             cancellation_token.throw_if_cancelled()
             return Response.ok("done")

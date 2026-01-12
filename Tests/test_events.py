@@ -66,7 +66,9 @@ def test_event_multiple_handlers():
 
 
 def test_event_fire_with_async_handler_requires_running_loop():
-    """Event.fire should fail if an async handler is used without a loop."""
+    """Event.fire should fail if an async handler is used without
+    a loop.
+    """
     event = Event[_Event]()
 
     async def async_handler(e: _Event):

@@ -20,10 +20,11 @@ StoredHandler = Handler[T] | weakref.WeakMethod[Callable[[T], Any]]
 
 class Event(Generic[T]):
     """
-    Delegate-style event that supports += / -= subscription syntax.
+    Delegate-style event that supports += / -= subscription
+    syntax.
 
-    Handlers can be synchronous or asynchronous. Weak references are used
-    for bound instance methods to avoid memory leaks.
+    Handlers can be synchronous or asynchronous. Weak references
+    are used for bound instance methods to avoid memory leaks.
     """
 
     def __init__(self, *, fail_fast: bool = True) -> None:
@@ -47,10 +48,14 @@ class Event(Generic[T]):
         Returns:
             Self for fluent chaining
         """
-        if inspect.ismethod(handler) and getattr(handler, "__self__", None) is not None:
-            # Bound instance method: keep weak ref to avoid retaining the
-            # instance.
-            self._handlers.append(weakref.WeakMethod(cast(Callable[[T], Any], handler)))
+        if inspect.ismethod(handler) and getattr(
+            handler, "__self__", None
+        ) is not None:
+            # Bound instance method: keep weak ref to avoid
+            # retaining the instance.
+            self._handlers.append(
+                weakref.WeakMethod(cast(Callable[[T], Any], handler))
+            )
         else:
             # Function / lambda / staticmethod
             self._handlers.append(handler)
@@ -85,7 +90,9 @@ class Event(Generic[T]):
         dead: list[int] = []
 
         try:
-            running_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+            running_loop: asyncio.AbstractEventLoop | None = (
+                asyncio.get_running_loop()
+            )
         except RuntimeError:
             running_loop = None
 
@@ -102,18 +109,18 @@ class Event(Generic[T]):
                         if inspect.iscoroutine(result):
                             result.close()
                         raise RuntimeError(
-                            "Event.fire() encountered an async handler but "
-                            "no running event loop. Use await "
-                            "Event.fire_async(...) / "
-                            "EventHub.publish_async(...)"
-                            "or call from an async context."
+                            "Event.fire() encountered an async "
+                            "handler but no running event loop. Use "
+                            "await Event.fire_async(...) / "
+                            "EventHub.publish_async(...) or call from "
+                            "an async context."
                         )
                     asyncio.ensure_future(cast(Awaitable[Any], result))
             except Exception:
                 if self._fail_fast:
                     raise
-                # Otherwise swallow/log. Logging strategy is an integration
-                # concern.
+                # Otherwise swallow/log. Logging strategy is an
+                # integration concern.
 
         for i in reversed(dead):
             del self._handlers[i]
