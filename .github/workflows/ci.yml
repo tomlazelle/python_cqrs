@@ -1,43 +1,84 @@
-name: CI
+name: Test and Publish
 
 on:
   push:
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main ]
+  release:
+    types: [published]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install -e .
+    
+    - name: Lint with ruff
+      run: |
+        ruff check src/cqrs_framing Tests examples
+    
+    - name: Check formatting with black
+      run: |
+        black --check src/cqrs_framing Tests examples
+    
+    - name: Type check with mypy
+      run: |
+        mypy src/cqrs_framing
+    
+    - name: Test with pytest
+      run: |
+        pytest Tests/ --cov=cqrs_framing --cov-report=xml
+    
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-dev.txt
-          python -m pip install -e .
-
-      - name: Type check
-        run: |
-          python -m mypy src/cqrs_framing
-
-      - name: Lint (minimal)
-        run: |
-          python -m ruff check src
-
-      - name: Format check
-        run: |
-          python -m black --check .
-
-      - name: Tests
-        run: |
-          python -m pytest Tests/ --cov=cqrs_framing --cov-report=term-missing
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    environment:
+      name: pypi-publish
+      url: https://pypi.org/project/cqrs-framing/
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: twine upload dist/*
